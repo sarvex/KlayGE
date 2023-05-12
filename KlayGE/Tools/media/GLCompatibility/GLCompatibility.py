@@ -2,16 +2,10 @@ def is_supported(feature_name):
 	return feature_name in is_supported.exts
 
 def support_all(feature_names):
-	for feature_name in feature_names:
-		if not is_supported(feature_name):
-			return False
-	return True
+	return all(is_supported(feature_name) for feature_name in feature_names)
 
 def support_one(feature_names):
-	for feature_name in feature_names:
-		if is_supported(feature_name):
-			return True
-	return False
+	return any(is_supported(feature_name) for feature_name in feature_names)
 
 ogl_ver_db = ['1.1', '1.2', '1.3', '1.4', '1.5', '2.0', '2.1', '3.0', '3.1', '3.2', '3.3', '4.0', '4.1', '4.2', '4.3', '4.4', '4.5', '4.6']
 glsl_ver_db = ['0.0', '1.1', '1.2', '1.3', '1.4', '1.5', '3.3', '4.0', '4.1', '4.2', '4.3', '4.4', '4.5', '4.6']
@@ -351,8 +345,10 @@ class information:
 		stream.write('</html>\n')
 
 	def make_reports(self, vendor, renderer, major_ver, minor_ver, glsl_major_ver, glsl_minor_ver, exts):
-		core_ver_index = ogl_ver_db.index(str(major_ver) + '.' + str(minor_ver))
-		glsl_ver_index = glsl_ver_db.index(str(glsl_major_ver) + '.' + str(glsl_minor_ver))
+		core_ver_index = ogl_ver_db.index(f'{str(major_ver)}.{str(minor_ver)}')
+		glsl_ver_index = glsl_ver_db.index(
+			f'{str(glsl_major_ver)}.{str(glsl_minor_ver)}'
+		)
 
 		self.vendor = vendor
 		self.renderer = renderer
@@ -416,18 +412,13 @@ def gl_compatibility(vendor, renderer, major_ver, minor_ver, glsl_major_ver, gls
 	info.make_reports(vendor, renderer, major_ver, minor_ver, glsl_major_ver, glsl_minor_ver, exts)
 
 	report_file_name = 'GLCompatibilityReport.html'
-	report_file = open(report_file_name, 'w')
-	info.to_html(report_file)
-	report_file.close()
-
+	with open(report_file_name, 'w') as report_file:
+		info.to_html(report_file)
 	command = ""
 	import os
 	if (os.name != "nt"):
 		try:
-			if ("Darwin" == os.uname()[0]):
-				command = "open "
-			else:
-				command = "firefox "
+			command = "open " if os.uname()[0] == "Darwin" else "firefox "
 		except:
 			pass
 	os.system(command + report_file_name);

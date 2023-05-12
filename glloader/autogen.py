@@ -34,7 +34,7 @@ class Typedef:
 		self.synonym = synonym
 
 	def __str__(self):
-		return "typedef %s %s;" % (self.type_name, self.synonym)
+		return f"typedef {self.type_name} {self.synonym};"
 
 class Token:
 	def __init__(self, name, value):
@@ -45,7 +45,7 @@ class Token:
 		self.value = value
 
 	def __str__(self):
-		return "#define %s %s" % (self.name, self.value)
+		return f"#define {self.name} {self.value}"
 
 class Param:
 	def __init__(self, type_name, name):
@@ -56,7 +56,7 @@ class Param:
 		self.name = name
 
 	def __str__(self):
-		return "%s %s" % (self.type_name, self.name)
+		return f"{self.type_name} {self.name}"
 
 class Mapping:
 	def __init__(self, from_ext, name):
@@ -105,62 +105,55 @@ class Extension:
 		else:
 			self.predefined = None
 
-		if not quite_mode:
-			if dom.documentElement.getAttributeNode("reg_no") == None:
-				print("\tWarning: %s is not in the OpenGL Extension Registry." % dom.documentElement.getAttribute("name"))
+		if not quite_mode and dom.documentElement.getAttributeNode("reg_no") is None:
+			print("\tWarning: %s is not in the OpenGL Extension Registry." % dom.documentElement.getAttribute("name"))
 
 		self.typedefs = []
-		typedefsTag = dom.documentElement.getElementsByTagName("typedefs")
-		if (typedefsTag):
-			for typedef in typedefsTag[0].getElementsByTagName("typedef"):
-				self.typedefs.append(Typedef(typedef.getAttribute("type"),
-								typedef.getAttribute("synonym")))
-
+		if typedefsTag := dom.documentElement.getElementsByTagName("typedefs"):
+			self.typedefs.extend(
+				Typedef(typedef.getAttribute("type"), typedef.getAttribute("synonym"))
+				for typedef in typedefsTag[0].getElementsByTagName("typedef")
+			)
 		self.tokens = []
-		tokensTag = dom.documentElement.getElementsByTagName("tokens")
-		if (tokensTag):
-			for token in tokensTag[0].getElementsByTagName("token"):
-				self.tokens.append(Token(token.getAttribute("name"),
-								token.getAttribute("value")))
-
+		if tokensTag := dom.documentElement.getElementsByTagName("tokens"):
+			self.tokens.extend(
+				Token(token.getAttribute("name"), token.getAttribute("value"))
+				for token in tokensTag[0].getElementsByTagName("token")
+			)
 		self.functions = []
-		funcionsTag = dom.documentElement.getElementsByTagName("functions")
-		if (funcionsTag):
+		if funcionsTag := dom.documentElement.getElementsByTagName("functions"):
 			for function in funcionsTag[0].getElementsByTagName("function"):
 				params = []
-				paramsTag = function.getElementsByTagName("params")
-				if (paramsTag):
-					for param in paramsTag[0].getElementsByTagName("param"):
-						params.append(Param(param.getAttribute("type"),
-								param.getAttribute("name")))
-
+				if paramsTag := function.getElementsByTagName("params"):
+					params.extend(
+						Param(param.getAttribute("type"), param.getAttribute("name"))
+						for param in paramsTag[0].getElementsByTagName("param")
+					)
 				mappings = []
-				mappingsTag = function.getElementsByTagName("mappings")
-				if (mappingsTag):
-					for mapping in mappingsTag[0].getElementsByTagName("mapping"):
-						mappings.append(Mapping(mapping.getAttribute("from"),
-								mapping.getAttribute("name")))
-
+				if mappingsTag := function.getElementsByTagName("mappings"):
+					mappings.extend(
+						Mapping(mapping.getAttribute("from"), mapping.getAttribute("name"))
+						for mapping in mappingsTag[0].getElementsByTagName("mapping")
+					)
 				static_link = False
 				link_attr = function.getAttribute("link")
-				if (link_attr != None):
-					if "static" == str(link_attr):
-						static_link = True
+				if (link_attr != None) and str(link_attr) == "static":
+					static_link = True
 				self.functions.append(Function(function.getAttribute("return"),
 							function.getAttribute("name"),
 							static_link,
 							params, mappings))
 
 		self.additionals = []
-		additionalsTag = dom.documentElement.getElementsByTagName("additionals")
-		if (additionalsTag):
+		if additionalsTag := dom.documentElement.getElementsByTagName("additionals"):
 			for ext_tag in additionalsTag[0].getElementsByTagName("ext"):
 				if ext_tag.parentNode == additionalsTag[0]:
 					self.additionals.append([ext_tag.getAttribute("name")])
 			for one_of_tag in additionalsTag[0].getElementsByTagName("one_of"):
-				one_of = []
-				for ext in one_of_tag.getElementsByTagName("ext"):
-					one_of.append(ext.getAttribute("name"))
+				one_of = [
+					ext.getAttribute("name")
+					for ext in one_of_tag.getElementsByTagName("ext")
+				]
 				self.additionals.append(one_of)
 
 def create_header(prefix, extensions, base_dir, quite_mode):
@@ -260,21 +253,18 @@ def create_header(prefix, extensions, base_dir, quite_mode):
 	header_str.write("#endif		/* _GLLOADER_%s_H */\n" % prefix.upper())
 
 	try:
-		cur_header_file = open("%s/include/glloader/glloader_%s.h" % (base_dir, prefix.lower()), "r")
-		cur_header_str = cur_header_file.read()
-		cur_header_file.close()
+		with open(f"{base_dir}/include/glloader/glloader_{prefix.lower()}.h", "r") as cur_header_file:
+			cur_header_str = cur_header_file.read()
 	except:
 		cur_header_str = ""
 	new_header_str = header_str.getvalue()
 	if new_header_str != cur_header_str:
 		if not quite_mode:
-			print("glloader_%s.h is updated" % prefix.lower())
-		header_file = open("%s/include/glloader/glloader_%s.h" % (base_dir, prefix.lower()), "w")
-		header_file.write(new_header_str)
-		header_file.close()
-	else:
-		if not quite_mode:
-			print("No change detected. Skip glloader_%s.h" % prefix.lower())
+			print(f"glloader_{prefix.lower()}.h is updated")
+		with open(f"{base_dir}/include/glloader/glloader_{prefix.lower()}.h", "w") as header_file:
+			header_file.write(new_header_str)
+	elif not quite_mode:
+		print(f"No change detected. Skip glloader_{prefix.lower()}.h")
 
 def create_source(prefix, extensions, base_dir, quite_mode):
 	source_str = StringIO()
@@ -335,7 +325,7 @@ def create_source(prefix, extensions, base_dir, quite_mode):
 					else:
 						source_str.write("\tglloader_init();\n")
 					source_str.write("\t")
-					if (function.return_type != "void") and (function.return_type != "VOID"):
+					if function.return_type not in ["void", "VOID"]:
 						source_str.write("return ")
 					source_str.write("%s(%s);\n" % (function.name, function.param_names_str()))
 					source_str.write("}\n")
@@ -362,12 +352,8 @@ def create_source(prefix, extensions, base_dir, quite_mode):
 		source_str.write("{\n")
 
 		source_str.write("\tglloader_%s = _glloader_%s;\n\n" % (extension.name, extension.name))
-		
-		all_static = True
-		for function in extension.functions:
-			if not function.static_link:
-				all_static = False
 
+		all_static = all(function.static_link for function in extension.functions)
 		source_str.write("\t_%s = 0;\n" % extension.name)
 		source_str.write("\tif (glloader_is_supported(\"%s\"))\n" % extension.name)
 		source_str.write("\t{\n")
@@ -396,10 +382,7 @@ def create_source(prefix, extensions, base_dir, quite_mode):
 		if backup:
 			plans = []
 			for i in range(0, len(extension.functions)):
-				froms = []
-				for m in extension.functions[i].mappings:
-					froms.append(m.from_ext)
-					
+				froms = [m.from_ext for m in extension.functions[i].mappings]
 				found = False
 				for plan in plans:
 					if plan[0] == froms:
@@ -409,12 +392,9 @@ def create_source(prefix, extensions, base_dir, quite_mode):
 				if not found:
 					plans.append([froms, [i]])
 
-			all_covered = True
-			for function in extension.functions:
-				if len(function.mappings) == 0:
-					all_covered = False
-					break
-
+			all_covered = all(
+				len(function.mappings) != 0 for function in extension.functions
+			)
 			source_str.write("\telse\n")
 			source_str.write("\t{\n")
 			for plan in plans:
@@ -435,13 +415,9 @@ def create_source(prefix, extensions, base_dir, quite_mode):
 					source_str.write("\t\t}\n")
 
 			if all_covered and len(plans) != 1:
-				all_backup_exts = []
-				for plan in plans:
-					all_backup_exts.append(plan[0])
-				for addi in extension.additionals:
-					all_backup_exts.append(addi)
-
-				if len(plans) > 0:
+				all_backup_exts = [plan[0] for plan in plans]
+				all_backup_exts.extend(iter(extension.additionals))
+				if plans:
 					source_str.write("\n")
 				source_str.write("\t\tif (")
 				for i in range(0, len(all_backup_exts)):
@@ -503,48 +479,44 @@ def create_source(prefix, extensions, base_dir, quite_mode):
 	source_str.write("#endif\t\t/* GLLOADER_%s */\n" % prefix.upper())
 
 	try:
-		cur_source_file = open("%s/src/glloader_%s.c" % (base_dir, prefix.lower()), "r")
-		cur_source_str = cur_source_file.read()
-		cur_source_file.close()
+		with open(f"{base_dir}/src/glloader_{prefix.lower()}.c", "r") as cur_source_file:
+			cur_source_str = cur_source_file.read()
 	except:
 		cur_source_str = ""
 	new_source_str = source_str.getvalue()
 	if new_source_str != cur_source_str:
 		if not quite_mode:
-			print("glloader_%s.c is updated" % prefix.lower())
-		source_file = open("%s/src/glloader_%s.c" % (base_dir, prefix.lower()), "w")
-		source_file.write(new_source_str)
-		source_file.close()
-	else:
-		if not quite_mode:
-			print("No change detected. Skip glloader_%s.c" % prefix.lower())
+			print(f"glloader_{prefix.lower()}.c is updated")
+		with open(f"{base_dir}/src/glloader_{prefix.lower()}.c", "w") as source_file:
+			source_file.write(new_source_str)
+	elif not quite_mode:
+		print(f"No change detected. Skip glloader_{prefix.lower()}.c")
 
 
 def auto_gen_glloader_files(base_dir, quite_mode):
 	import os
-	exts = os.listdir(base_dir + "/xml")
+	exts = os.listdir(f"{base_dir}/xml")
 
 	core_set = {}
 	extension_set = {}
-	feature_set = {}
-
 	from xml.dom.minidom import parse
 	for ext in exts:
 		if ext[-4:] == ".xml":
 			if not quite_mode:
-				print("Processing " + ext)
-			prefix = ext[0 : ext.find("_")]
-			if (-1 == ext.find("_VERSION_")):
+				print(f"Processing {ext}")
+			prefix = ext[:ext.find("_")]
+			if ext.find("_VERSION_") == -1:
 				if prefix not in extension_set:
 					extension_set[prefix] = []
-				extension_set[prefix].append(Extension(parse(base_dir + "/xml/" + ext), quite_mode))
+				extension_set[prefix].append(
+					Extension(parse(f"{base_dir}/xml/{ext}"), quite_mode)
+				)
 			else:
 				if prefix not in core_set:
 					core_set[prefix] = []
-				core_set[prefix].append(Extension(parse(base_dir + "/xml/" + ext), quite_mode))
+				core_set[prefix].append(Extension(parse(f"{base_dir}/xml/{ext}"), quite_mode))
 
-	for cores in core_set.items():
-		feature_set[cores[0]] = cores[1]
+	feature_set = {cores[0]: cores[1] for cores in core_set.items()}
 	for extensions in extension_set.items():
 		prefix = extensions[0]
 		if prefix not in feature_set:
@@ -575,9 +547,5 @@ if __name__ == "__main__":
 
 	print("Generating glloader files...")
 
-	quite_mode = False
-	if (len(sys.argv) >= 2):
-		if ("-q" == sys.argv[1]):
-			quite_mode = True
-
+	quite_mode = (len(sys.argv) >= 2) and sys.argv[1] == "-q"
 	auto_gen_glloader_files(os.curdir, quite_mode)

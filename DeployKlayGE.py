@@ -6,7 +6,7 @@ import os, sys
 from Build import BuildInfo
 
 def CopyToDst(src_name, dst_dir):
-	print("Copying %s to %s..." % (src_name, dst_dir))
+	print(f"Copying {src_name} to {dst_dir}...")
 	import shutil
 	shutil.copy2(src_name, dst_dir)
 

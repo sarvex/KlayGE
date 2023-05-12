@@ -27,19 +27,19 @@ def Extend7To8Bits(input):
 	return ExtendNTo8Bits(input, 7)
 
 def GenExpand5Table():
-	expand5 = [ 0 for i in range(32) ]
+	expand5 = [0 for _ in range(32)]
 	for i in range(len(expand5)):
 		expand5[i] = Extend5To8Bits(i)
 	return expand5
 
 def GenExpand6Table():
-	expand6 = [ 0 for i in range(64) ]
+	expand6 = [0 for _ in range(64)]
 	for i in range(len(expand6)):
 		expand6[i] = Extend6To8Bits(i)
 	return expand6
 
 def GenExpand7Table():
-	expand7 = [ 0 for i in range(128) ]
+	expand7 = [0 for _ in range(128)]
 	for i in range(len(expand7)):
 		expand7[i] = Extend7To8Bits(i)
 	return expand7
@@ -61,17 +61,14 @@ def ETCGetModifier(cw, selector):
 		return -etc1_modifier_table[cw][not selector]
 
 def ETC1DecodeValue(diff, inten, selector, packed_c):
-	if diff:
-		c = Extend5To8Bits(packed_c)
-	else:
-		c = Extend4To8Bits(packed_c)
+	c = Extend5To8Bits(packed_c) if diff else Extend4To8Bits(packed_c)
 	c += ETCGetModifier(inten, selector)
 	c = max(0, min(c, 255))
 	return c
 
 def PrepareOptTable(expand):
 	size = len(expand)
-	o_match = [ [ 0 for i in range(2) ] for j in range(256) ]
+	o_match = [[0 for _ in range(2)] for _ in range(256)]
 	for i in range(256):
 		best_err = 256
 		for min in range(size):
@@ -87,7 +84,7 @@ def PrepareOptTable(expand):
 
 def PrepareOptTable2(expand):
 	size = len(expand)
-	o_match = [ [ 0 for i in range(2) ] for j in range(256) ]
+	o_match = [[0 for _ in range(2)] for _ in range(256)]
 	for i in range(256):
 		best_err = 256
 		for min in range(size):
@@ -101,12 +98,9 @@ def PrepareOptTable2(expand):
 	return o_match
 
 def PrepareETC1InverseLookup():
-	etc1_inverse_lookup = [ [ 0 for i in range(256) ] for j in range(64) ]
+	etc1_inverse_lookup = [[0 for _ in range(256)] for _ in range(64)]
 	for diff in range(2):
-		if diff != 0:
-			limit = 32
-		else:
-			limit = 16
+		limit = 32 if diff != 0 else 16
 		for inten in range(8):
 			for selector in range(4):
 				inverse_table_index = diff + (inten << 1) + (selector << 4)
@@ -150,16 +144,14 @@ class Tables:
 		header_str.write("}\n")
 
 		try:
-			cur_header_file = open(file_name, "r")
-			cur_header_str = cur_header_file.read()
-			cur_header_file.close()
+			with open(file_name, "r") as cur_header_file:
+				cur_header_str = cur_header_file.read()
 		except:
 			cur_header_str = ""
 		new_header_str = header_str.getvalue()
 		if new_header_str != cur_header_str:
-			output_file = open(file_name, "w")
-			output_file.write(new_header_str)
-			output_file.close()
+			with open(file_name, "w") as output_file:
+				output_file.write(new_header_str)
 
 	def WriteToSourceFile(self, file_name):
 		source_str = StringIO()
@@ -183,7 +175,6 @@ class Tables:
 						source_str.write(",")
 					source_str.write(" ")
 				source_str.write("\n")
-				source_str.write("\t\t};\n")
 			else:
 				source_str.write("\t\t%s %s[%d][%d] =\n" % (table[0], table[1], len(table[2]), len(table[2][0])))
 				source_str.write("\t\t{\n")
@@ -198,7 +189,7 @@ class Tables:
 					if i != len(table[2]) - 1:
 						source_str.write(",")
 					source_str.write("\n")
-				source_str.write("\t\t};\n")
+			source_str.write("\t\t};\n")
 			if n != len(self.tables) - 1:
 				source_str.write("\n")
 
@@ -206,24 +197,22 @@ class Tables:
 		source_str.write("}\n")
 
 		try:
-			cur_source_file = open(file_name, "r")
-			cur_source_str = cur_source_file.read()
-			cur_source_file.close()
+			with open(file_name, "r") as cur_source_file:
+				cur_source_str = cur_source_file.read()
 		except:
 			cur_source_str = ""
 		new_source_str = source_str.getvalue()
 		if new_source_str != cur_source_str:
-			output_file = open(file_name, "w")
-			output_file.write(new_source_str)
-			output_file.close()
+			with open(file_name, "w") as output_file:
+				output_file.write(new_source_str)
 
 if __name__ == "__main__":
 	expand5 = GenExpand5Table()
 	expand6 = GenExpand6Table()
 	expand7 = GenExpand7Table()
 
-	quant_5_tab = [ 0 for i in range(256 + 16) ]
-	quant_6_tab = [ 0 for i in range(256 + 16) ]
+	quant_5_tab = [0 for _ in range(256 + 16)]
+	quant_6_tab = [0 for _ in range(256 + 16)]
 	for i in range(len(quant_5_tab)):
 		v = max(0, min(i - 8, 255))
 		quant_5_tab[i] = expand5[Mul8Bit(v, len(expand5) - 1)]

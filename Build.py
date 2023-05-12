@@ -69,21 +69,18 @@ def GenerateCfgBuildFromDefault():
 	shutil.copyfile("CfgBuildDefault.py", "CfgBuild.py")
 
 def LogError(message):
-	print("[E] %s" % message)
+	print(f"[E] {message}")
 	sys.stdout.flush()
-	if sys.platform.startswith("win"):
-		pause_cmd = "pause"
-	else:
-		pause_cmd = "read"
+	pause_cmd = "pause" if sys.platform.startswith("win") else "read"
 	subprocess.call(pause_cmd, shell = True)
 	sys.exit(1)
 
 def LogInfo(message):
-	print("[I] %s" % message)
+	print(f"[I] {message}")
 	sys.stdout.flush()
 
 def LogWarning(message):
-	print("[W] %s" % message)
+	print(f"[W] {message}")
 	sys.stdout.flush()
 
 class CompilerInfo:
@@ -100,26 +97,14 @@ class CompilerInfo:
 
 class BuildInfo:
 	@classmethod
-	def FromArgv(BuildInfo, argv, base = 0):
-		project = None
-		compiler = None
-		archs = None
-		cfg = None
-		target = None
-
+	def FromArgv(cls, argv, base = 0):
 		argc = len(argv)
-		if argc > base + 1:
-			project = argv[base + 1]
-		if argc > base + 2:
-			compiler = argv[base + 2]
-		if argc > base + 3:
-			archs = (argv[base + 3], )
-		if argc > base + 4:
-			cfg = (argv[base + 4], )
-		if argc > base + 5:
-			target = argv[base + 5]
-
-		return BuildInfo(project, compiler, archs, cfg, target)
+		project = argv[base + 1] if argc > base + 1 else None
+		compiler = argv[base + 2] if argc > base + 2 else None
+		archs = (argv[base + 3], ) if argc > base + 3 else None
+		cfg = (argv[base + 4], ) if argc > base + 4 else None
+		target = argv[base + 5] if argc > base + 5 else None
+		return cls(project, compiler, archs, cfg, target)
 
 	def __init__(self, project, compiler, archs, cfg, target):
 		try:
